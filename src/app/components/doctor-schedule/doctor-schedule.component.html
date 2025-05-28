@@ -1,0 +1,162 @@
+<div class="min-h-screen bg-gray-50 p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-blue-700">
+      Agenda - {{ medico?.nome }}
+    </h2>
+    <button
+      (click)="goBack()"
+      class="bg-gray-200 hover:bg-gray-300 text-sm text-gray-700 px-4 py-2 rounded-md"
+    >
+      Voltar para o painel
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Calendário -->
+    <div class="bg-white p-4 rounded-xl shadow col-span-1">
+      <div class="flex justify-between items-center mb-4">
+        <button (click)="prevMonth()" class="text-blue-600 hover:underline">
+          &lt;
+        </button>
+        <h3 class="text-lg font-semibold text-gray-700 capitalize">
+          {{ displayMonth }} {{ displayYear }}
+        </h3>
+        <button (click)="nextMonth()" class="text-blue-600 hover:underline">
+          &gt;
+        </button>
+      </div>
+      <div
+        class="grid grid-cols-7 text-center text-sm font-medium text-gray-500 mb-2"
+      >
+        <div *ngFor="let day of weekDays">{{ day }}</div>
+      </div>
+      <div class="grid grid-cols-7 text-center">
+        <div *ngFor="let day of calendarDays" class="p-2">
+          <button
+            class="w-10 h-10 rounded-full transition hover:bg-blue-100 'bg-blue-500 text-white': isSelected(day.date), 'text-gray-400': !day.currentMonth"
+            (click)="selectDate(day.date)"
+          >
+            {{ day.date.getDate() }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de Consultas -->
+    <div class="col-span-1 md:col-span-2 bg-white rounded-xl p-6 shadow">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">
+        Consultas em {{ selectedDate | date : "fullDate" }}
+      </h3>
+
+      <div
+        *ngIf="dailyExibicao.length > 0; else semConsultas"
+        class="overflow-auto"
+      >
+        <table class="w-full text-sm text-left">
+          <thead>
+            <tr class="text-gray-500 border-b">
+              <th class="py-2">Paciente</th>
+              <th>Horário</th>
+              <th>Status</th>
+              <th class="text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of dailyExibicao" class="border-b">
+              <td class="py-2">{{ item.paciente?.nome }}</td>
+              <td>{{ item.consulta.data_consulta | date : "shortTime" }}</td>
+              <td>{{ item.consulta.status }}</td>
+              <td class="text-right space-x-2">
+                <button
+                  class="text-green-600 hover:underline"
+                  (click)="abrirConfirmacao(item.consulta, 'confirmar')"
+                >
+                  Confirmar
+                </button>
+                <button
+                  class="text-red-600 hover:underline"
+                  (click)="abrirConfirmacao(item.consulta, 'cancelar')"
+                >
+                  Cancelar
+                </button>
+                <button
+                  class="text-yellow-600 hover:underline"
+                  (click)="reagendar(item.consulta)"
+                >
+                  Reagendar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #semConsultas>
+        <p class="text-gray-500 mt-4">
+          Nenhuma consulta agendada para esse dia.
+        </p>
+      </ng-template>
+    </div>
+  </div>
+  <div *ngIf="consultaSelecionada" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">
+      Confirmar {{ acaoPendencia === 'cancelar' ? 'cancelamento' : 'confirmação' }}?
+    </h2>
+    <p class="text-gray-700 mb-6">
+      Deseja realmente {{ acaoPendencia === 'cancelar' ? 'cancelar' : 'confirmar' }} a consulta com
+      <strong>{{ pacientesMap.get(consultaSelecionada.id_paciente)?.nome }}</strong> em
+      <strong>{{ consultaSelecionada.data_consulta | date:'short' }}</strong>?
+    </p>
+    <div class="flex justify-end gap-4">
+      <button (click)="fecharConfirmacao()" class="px-4 py-2 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300">
+        Voltar
+      </button>
+      <button (click)="confirmarAcao()" class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+        Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Modal de Reagendamento -->
+<div
+  *ngIf="consultaParaReagendar"
+  class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+>
+  <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+    <h3 class="text-lg font-bold mb-4 text-gray-700">
+      Reagendar Consulta
+    </h3>
+
+    <label class="block mb-2 text-sm font-medium text-gray-600">Nova Data</label>
+    <input
+      [(ngModel)]="novaData"
+      type="date"
+      class="w-full border rounded px-3 py-2 mb-4"
+    />
+
+    <label class="block mb-2 text-sm font-medium text-gray-600">Novo Horário</label>
+    <input
+      [(ngModel)]="novoHorario"
+      type="time"
+      class="w-full border rounded px-3 py-2 mb-4"
+    />
+
+    <div class="flex justify-end gap-2 mt-4">
+      <button
+        class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded"
+        (click)="fecharReagendamento()"
+      >
+        Cancelar
+      </button>
+      <button
+        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        (click)="confirmarReagendamento()"
+      >
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+</div>
