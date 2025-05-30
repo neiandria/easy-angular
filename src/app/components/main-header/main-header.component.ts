@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
-
-type UserType = 'paciente' | 'medico' | 'recepcionista';
+import { DataService, UsuarioLogado } from '../../services/data-service.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header',
@@ -10,17 +10,25 @@ type UserType = 'paciente' | 'medico' | 'recepcionista';
   styleUrls: ['./main-header.component.css'],
   imports: [CommonModule, RouterModule],
 })
-export class HeaderComponent implements OnInit {
-  currentUser: { id: number; fullName: string; type: UserType } | null = null;
+export class HeaderComponent implements OnInit, OnDestroy {
+  currentUser: UsuarioLogado | null = null;
   dropdownOpen: boolean = false;
+  private subscription?: Subscription;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private dataService: DataService) {}
 
   ngOnInit(): void {
-    const userData = localStorage.getItem('currentUser');
-    if (userData) {
-      this.currentUser = JSON.parse(userData);
-    }
+    // Inscreve para receber atualizações do usuário logado
+    this.subscription = this.dataService.getUsuarioLogado$().subscribe(user => {
+      this.currentUser = user;
+      if (!user) {
+        this.dropdownOpen = false; // Fecha dropdown ao logout
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
   }
 
   toggleDropdown(): void {
@@ -28,8 +36,27 @@ export class HeaderComponent implements OnInit {
   }
 
   logout(): void {
-    localStorage.removeItem('currentUser');
-    this.currentUser = null;
+    this.dataService.logout();
+    // currentUser será atualizado automaticamente pelo BehaviorSubject
     this.router.navigate(['/login']);
+  }
+
+  irParaMinhaPagina(): void {
+    if (!this.currentUser) return;
+
+    switch (this.currentUser.tipo) {
+      case 'paciente':
+        this.router.navigate(['/paciente', this.currentUser.id]);
+        break;
+      case 'medico':
+        this.router.navigate(['/medico', this.currentUser.id]);
+        break;
+      case 'recepcionista':
+        this.router.navigate(['/recepcionista', this.currentUser.id]);
+        break;
+      default:
+        this.router.navigate(['/']);
+    }
+    this.dropdownOpen = false;
   }
 }
