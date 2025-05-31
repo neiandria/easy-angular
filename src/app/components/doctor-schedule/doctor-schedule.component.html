@@ -63,7 +63,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let item of dailyExibicao" class="border-b">
-              <td class="py-2">{{ item.paciente?.nome }}</td>
+              <td class="py-2">{{ item.paciente.nome }}</td>
               <td>{{ item.consulta.data_consulta | date : "shortTime" }}</td>
               <td>{{ item.consulta.status }}</td>
               <td class="text-right space-x-2">

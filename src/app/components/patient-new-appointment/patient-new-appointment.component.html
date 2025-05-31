@@ -1,0 +1,109 @@
+<div class="p-6 bg-gray-50 min-h-screen">
+  <div class="max-w-2xl mx-auto bg-white rounded-xl shadow p-6">
+    <h2 class="text-2xl font-bold text-blue-800 mb-4">Agendar Nova Consulta</h2>
+    <!-- Wizard Steps Indicator -->
+    <div class="flex items-center mb-6">
+      <div *ngFor="let stepLabel of ['Especialidade','Médico','Data','Horário','Resumo']; let i = index"
+           class="flex-1 text-center">
+        <div class="mx-auto w-8 h-8 rounded-full flex items-center justify-center mb-1"
+             [ngClass]="step === i+1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'">
+          {{ i+1 }}
+        </div>
+        <div class="text-sm" [ngClass]="step === i+1 ? 'text-blue-600' : 'text-gray-500'">{{ stepLabel }}</div>
+      </div>
+    </div>
+
+    <!-- Step 1: Especialidade -->
+    <div *ngIf="step === 1">
+      <label class="block mb-2 font-medium text-gray-700">Escolha a Especialidade</label>
+      <select [(ngModel)]="selectedSpecialty" (change)="onSelectSpecialty()" class="w-full border rounded p-2 mb-4">
+        <option [ngValue]="null" disabled selected>-- Selecione --</option>
+        <option *ngFor="let esp of specialties" [value]="esp">{{ esp }}</option>
+      </select>
+      <button (click)="nextStep()" [disabled]="!selectedSpecialty" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50">Próximo</button>
+    </div>
+
+    <!-- Step 2: Médico -->
+    <div *ngIf="step === 2">
+      <label class="block mb-2 font-medium text-gray-700">Selecione o Médico</label>
+      <select [(ngModel)]="selectedDoctorId" class="w-full border rounded p-2 mb-4">
+        <option [ngValue]="null" disabled selected>-- Selecione --</option>
+        <option *ngFor="let doc of doctors" [value]="doc.id_medico">Dr(a). {{ doc.nome }} ({{ doc.CRM }})</option>
+      </select>
+      <div class="flex justify-between">
+        <button (click)="prevStep()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">Voltar</button>
+        <button (click)="nextStep()" [disabled]="!selectedDoctorId" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50">Próximo</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Data -->
+    <div *ngIf="step === 3">
+      <label class="block mb-2 font-medium text-gray-700">Escolha a Data</label>
+      <div class="grid grid-cols-7 text-center text-sm font-medium text-gray-500 mb-2">
+        <div *ngFor="let wd of weekDays">{{ wd }}</div>
+      </div>
+      <div class="grid grid-cols-7 text-center mb-4">
+        <button *ngFor="let day of calendarDays"
+                (click)="selectDate(day.date)"
+                [disabled]="!day.currentMonth"
+                class="w-8 h-8 m-0.5 rounded-full transition"
+                [ngClass]="{
+                  'bg-blue-600 text-white': isSelected(day.date),
+                  'hover:bg-blue-100': day.currentMonth && !isSelected(day.date),
+                  'text-gray-400': !day.currentMonth
+                }">
+          {{ day.date.getDate() }}
+        </button>
+      </div>
+      <div class="flex justify-between mb-4">
+        <button (click)="prevMonth()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">&lt; Mês Ant.</button>
+        <button (click)="nextMonth()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">Próx. Mês &gt;</button>
+      </div>
+      <div class="flex justify-between">
+        <button (click)="prevStep()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">Voltar</button>
+        <button (click)="nextStep()" [disabled]="!selectedDate" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50">Próximo</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Horário -->
+    <div *ngIf="step === 4">
+      <label class="block mb-2 font-medium text-gray-700">Escolha o Horário</label>
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <button *ngFor="let time of times"
+                (click)="selectTime(time)"
+                [disabled]="!isTimeAvailable(time)"
+                class="py-2 rounded-lg transition"
+                [ngClass]="{
+                  'bg-blue-600 text-white': time===selectedTime,
+                  'bg-gray-100 hover:bg-blue-100': isTimeAvailable(time) && time!==selectedTime,
+                  'bg-gray-200 text-gray-400 cursor-not-allowed': !isTimeAvailable(time)
+                }">
+          {{ time }}
+        </button>
+      </div>
+      <div class="flex justify-between">
+        <button (click)="prevStep()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">Voltar</button>
+        <button (click)="nextStep()" [disabled]="!selectedTime" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50">Próximo</button>
+      </div>
+    </div>
+
+    <!-- Step 5: Resumo -->
+    <div *ngIf="step === 5">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Resumo da Consulta</h3>
+      <p><strong>Especialidade:</strong> {{ selectedSpecialty }}</p>
+      <p><strong>Médico:</strong> {{ selectedDoctor?.nome }}</p>
+      <p><strong>Data:</strong> {{ selectedDate | date:'dd/MM/yyyy' }}</p>
+      <p><strong>Horário:</strong> {{ selectedTime }}</p>
+      <div class="flex justify-between mt-6">
+        <button (click)="prevStep()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">Voltar</button>
+        <button (click)="confirmarAgendamento()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Confirmar</button>
+      </div>
+    </div>
+
+    <!-- Mensagem de Confirmação -->
+    <div *ngIf="showConfirmation" class="mt-6 bg-green-100 border border-green-300 text-green-800 p-4 rounded-lg text-center">
+      <p class="font-semibold mb-4">Consulta agendada com sucesso!</p>
+      <button (click)="voltarDashboard()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">OK</button>
+    </div>
+  </div>
+</div>

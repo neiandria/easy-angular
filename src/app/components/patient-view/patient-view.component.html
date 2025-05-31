@@ -1,0 +1,75 @@
+<div class="p-6 bg-gray-50 min-h-screen">
+  <!-- Header com saudação e botão Nova Consulta -->
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-blue-800">Olá, {{ paciente?.nome }}</h2>
+    <button (click)="novoAgendamento()"
+            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition">
+      Nova Consulta
+    </button>
+  </div>
+
+  <!-- Cards destaques -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <!-- Próxima Consulta -->
+    <div class="bg-white p-6 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Próxima Consulta</h3>
+      <div *ngIf="proximaConsulta; else semProxima" class="text-gray-700">
+        <p><strong>Médico:</strong> {{ proximaConsulta.medico.nome }} ({{ proximaConsulta.medico.especialidade }})</p>
+        <p><strong>Data:</strong> {{ proximaConsulta.consulta.data_consulta | date:'dd/MM/yyyy' }} às {{ proximaConsulta.consulta.data_consulta | date:'shortTime' }}</p>
+        <p><strong>Status:</strong> {{ proximaConsulta.consulta.status }}</p>
+      </div>
+      <ng-template #semProxima>
+        <p class="text-gray-500">Você não tem consultas agendadas.</p>
+      </ng-template>
+    </div>
+
+    <!-- Lembrete -->
+    <div class="bg-white p-6 rounded-xl shadow">
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Lembrete</h3>
+      <div *ngIf="proximaConsulta; else semLembrete" class="text-gray-700">
+        <p>A consulta com</p>
+        <p class="font-medium">Dr(a). {{ proximaConsulta.medico.nome }}</p>
+        <p>foi confirmada e faltam</p>
+        <p class="font-bold text-blue-600 text-xl">{{ diasParaProxima }} dias</p>
+      </div>
+      <ng-template #semLembrete>
+        <p class="text-gray-500">Sem lembretes no momento.</p>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Lista de Consultas Agendadas -->
+  <div class="bg-white p-6 rounded-xl shadow">
+    <h3 class="text-lg font-semibold text-gray-700 mb-4">Minhas Consultas</h3>
+    <div *ngIf="minhasConsultas.length > 0; else semConsultas" class="overflow-auto">
+      <table class="w-full text-sm text-left">
+        <thead>
+          <tr class="text-gray-500 border-b">
+            <th class="py-2">Médico</th>
+            <th>Especialidade</th>
+            <th>Data</th>
+            <th>Horário</th>
+            <th>Status</th>
+            <th class="text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of minhasConsultas" class="border-b">
+            <td class="py-2">{{ item.medico.nome }}</td>
+            <td>{{ item.medico.especialidade }}</td>
+            <td>{{ item.consulta.data_consulta | date:'dd/MM/yyyy' }}</td>
+            <td>{{ item.consulta.data_consulta | date:'shortTime' }}</td>
+            <td>{{ item.consulta.status }}</td>
+            <td class="text-right space-x-2">
+              <button class="text-yellow-600 hover:underline" (click)="reagendar(item.consulta)">Reagendar</button>
+              <button class="text-red-600 hover:underline" (click)="cancelar(item.consulta)">Cancelar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #semConsultas>
+      <p class="text-gray-500">Você não tem consultas agendadas.</p>
+    </ng-template>
+  </div>
+</div>

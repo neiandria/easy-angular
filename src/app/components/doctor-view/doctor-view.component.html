@@ -35,9 +35,9 @@
   <div class="bg-white rounded-xl p-6 shadow mb-6">
     <h3 class="text-lg font-semibold text-gray-700 mb-4">Consulta mais próxima</h3>
     <div *ngIf="consultaMaisProxima; else semConsulta" class="text-sm text-gray-700">
-      <p><strong>Paciente:</strong> {{ consultaMaisProxima.paciente?.nome }}</p>
-      <p><strong>Data:</strong> {{ consultaMaisProxima.consulta?.data_consulta | date: 'dd/MM/yyyy' }}</p>
-      <p><strong>Status:</strong> {{ consultaMaisProxima.consulta?.status }}</p>
+      <p><strong>Paciente:</strong> {{ consultaMaisProxima.paciente.nome }}</p>
+      <p><strong>Data:</strong> {{ consultaMaisProxima.consulta.data_consulta | date: 'dd/MM/yyyy' }}</p>
+      <p><strong>Status:</strong> {{ consultaMaisProxima.consulta.status }}</p>
     </div>
     <ng-template #semConsulta>
       <p class="text-gray-500">Nenhuma consulta agendada.</p>
@@ -59,7 +59,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let item of minhasConsultas" class="border-b">
-            <td class="py-2">{{ item.paciente?.nome }}</td>
+            <td class="py-2">{{ item.paciente.nome }}</td>
             <td>{{ item.consulta.data_consulta | date: 'short' }}</td>
             <td>{{ item.consulta.status }}</td>
             <td class="text-right space-x-2">
@@ -78,7 +78,7 @@
   <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-md text-center">
     <h3 class="text-lg font-semibold mb-4">Confirmar consulta</h3>
     <p class="text-gray-700 mb-6">
-      Deseja confirmar a realização da consulta com <strong>{{ consultaParaConfirmar.paciente?.nome }}</strong>?
+      Deseja confirmar a realização da consulta com <strong>{{ consultaParaConfirmar.paciente.nome }}</strong>?
     </p>
     <div class="flex justify-center space-x-4">
       <button (click)="confirmarConsulta()" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg">Confirmar</button>

@@ -19,9 +19,7 @@ interface ConsultaExibicao {
   templateUrl: './doctor-view.component.html',
   styleUrls: ['./doctor-view.component.css'],
   imports: [CommonModule, RouterModule],
-  // providers: [providei18nOptions({
-  //   locale: 'pt-BR',
-  //   timeZone: 'America/Sao_Paulo',})]
+
 })
 export class MedicoDashboardComponent implements OnInit {
   medicoId: number = 0;
