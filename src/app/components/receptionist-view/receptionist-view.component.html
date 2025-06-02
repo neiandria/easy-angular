@@ -1,0 +1,70 @@
+ <div class="p-6 bg-gray-50 min-h-screen">
+    <h2 class="text-2xl font-bold text-blue-800 mb-4">PAINEL DE RECEPÇÃO</h2>
+    <p class="text-gray-600 mb-6">Bem-vinda(o), {{ currentUser?.fullName }}</p>
+
+    <div class="flex space-x-4 mb-6">
+      <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"  [routerLink]="['/recepcionista',currentUser?.id,'nova-consulta']" routerLinkActive="router-link-active">Agendar Consulta</button>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded" [routerLink]="['/recepcionista',currentUser?.id,'gerenciar-pacientes']" routerLinkActive="router-link-active" >Gerenciar Pacientes</button>
+    </div>
+
+    <!-- Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white p-4 rounded-xl shadow text-center">
+        <p class="text-sm text-gray-500">Consultas Hoje</p>
+        <p class="text-2xl font-bold text-blue-600">{{ consultasHoje }}</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow text-center">
+        <p class="text-sm text-gray-500">Pacientes Cadastrados</p>
+        <p class="text-2xl font-bold text-blue-600">{{ totalPacientes }}</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow text-center">
+        <p class="text-sm text-gray-500">Médicos Disponíveis</p>
+        <p class="text-2xl font-bold text-blue-600">{{ totalMedicos }}</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow text-center">
+        <p class="text-sm text-gray-500">Agendamentos</p>
+        <p class="text-2xl font-bold text-blue-600">{{ totalAgendados }}</p>
+      </div>
+    </div>
+
+    <!-- Filtros de data -->
+    <div class="mb-4">
+      <button (click)="view = 'hoje'" [class.font-bold]="view==='hoje'">Hoje</button> |
+      <button (click)="view = 'amanha'" [class.font-bold]="view==='amanha'">Amanhã</button> |
+      <button (click)="view = 'semana'" [class.font-bold]="view==='semana'">Esta Semana</button>
+    </div>
+
+    <!-- Barra de pesquisa -->
+    <input type="text" placeholder="Buscar por nome ou CPF" [(ngModel)]="searchTerm" class="border p-2 rounded w-full mb-4" />
+
+    <!-- Lista -->
+    <div class="overflow-auto bg-white rounded-xl shadow">
+      <table class="w-full text-sm text-left">
+        <thead>
+          <tr class="text-gray-500 border-b">
+            <th class="py-2">Horário</th>
+            <th>Data</th>
+            <th>Paciente</th>
+            <th>Médico</th>
+            <th>Especialidade</th>
+            <th>Status</th>
+            <th class="text-right">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filtradas" class="border-b">
+            <td class="py-2">{{ item.consulta.data_consulta | date:'shortTime' }}</td>
+            <td>{{ item.consulta.data_consulta | date:'dd/MM/yyyy' }}</td>
+            <td>{{ item.paciente.nome }}</td>
+            <td>{{ item.medico.nome }}</td>
+            <td>{{ item.medico.especialidade }}</td>
+            <td>{{ item.consulta.status }}</td>
+            <td class="text-right space-x-2">
+              <button (click)="reagendar(item.consulta)" class="text-yellow-600 hover:underline">Reagendar</button>
+              <button (click)="cancelar(item.consulta)" class="text-red-600 hover:underline">Cancelar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>

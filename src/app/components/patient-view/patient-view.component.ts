@@ -1,8 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { DataService, Consulta, Medico, Paciente, UsuarioLogado } from '../../services/data-service.service';
-import { Subscription } from 'rxjs';
+import { Router } from '@angular/router';
+import {
+  DataService,
+  Consulta,
+  Medico,
+  Paciente,
+  UsuarioLogado
+} from '../../services/data-service.service';
 import { CommonModule } from '@angular/common';
+import { ReagendarConsultaComponent } from '../../ch-appointment.com/ch-appointment.component';
 
 interface ConsultaExibicao {
   consulta: Consulta;
@@ -13,7 +19,7 @@ interface ConsultaExibicao {
   selector: 'app-paciente-dashboard',
   templateUrl: './patient-view.component.html',
   styleUrls: ['./patient-view.component.css'],
-  imports: [CommonModule]
+  imports: [CommonModule, ReagendarConsultaComponent]
 })
 export class PatientViewComponent implements OnInit {
   pacienteId = 0;
@@ -25,6 +31,9 @@ export class PatientViewComponent implements OnInit {
   proximaConsulta: ConsultaExibicao | null = null;
   diasParaProxima = 0;
   minhasConsultas: ConsultaExibicao[] = [];
+
+  // controla o modal de reagendamento
+  consultaParaReagendar: Consulta | null = null;
 
   constructor(
     private dataService: DataService,
@@ -39,20 +48,18 @@ export class PatientViewComponent implements OnInit {
     }
     this.pacienteId = user.id;
 
-    // Carrega paciente
     this.dataService.getPacienteById(this.pacienteId)
       .subscribe(p => this.paciente = p || null);
 
-    // Carrega médicos *antes* das consultas
-    this.dataService.getMedicos().subscribe(medicos => {
-      medicos.forEach(m => this.medicosMap.set(m.id_medico, m));
+    this.dataService.getMedicos().subscribe(meds =>
+      meds.forEach(m => this.medicosMap.set(m.id_medico, m))
+    );
 
-      // Agora sim podemos buscar e processar as consultas
-      this.dataService.getConsultas().subscribe(all => {
-        this.consultas = all.filter(c => c.id_paciente === this.pacienteId);
-        this.definirProximaConsulta();
-        this.montarListas();
-      });
+    // inscrição reativa em todas as consultas
+    this.dataService.getConsultas().subscribe(all => {
+      this.consultas = all.filter(c => c.id_paciente === this.pacienteId);
+      this.definirProximaConsulta();
+      this.montarListas();
     });
   }
 
@@ -62,12 +69,11 @@ export class PatientViewComponent implements OnInit {
       .sort((a, b) =>
         new Date(a.data_consulta).getTime() - new Date(b.data_consulta).getTime()
       );
-
     if (futuras.length) {
       const c = futuras[0];
-      const medico = this.medicosMap.get(c.id_medico);
-      if (medico) {
-        this.proximaConsulta = { consulta: c, medico };
+      const m = this.medicosMap.get(c.id_medico);
+      if (m) {
+        this.proximaConsulta = { consulta: c, medico: m };
         const diff = new Date(c.data_consulta).getTime() - Date.now();
         this.diasParaProxima = Math.ceil(diff / (1000 * 60 * 60 * 24));
       }
@@ -82,20 +88,28 @@ export class PatientViewComponent implements OnInit {
         new Date(a.data_consulta).getTime() - new Date(b.data_consulta).getTime()
       )
       .map(c => {
-        const medico = this.medicosMap.get(c.id_medico);
-        return medico ? { consulta: c, medico } : null;
+        const m = this.medicosMap.get(c.id_medico);
+        return m ? { consulta: c, medico: m } : null;
       })
-      .filter((item): item is ConsultaExibicao => item !== null);
+      .filter((x): x is ConsultaExibicao => x !== null);
   }
 
   novoAgendamento(): void {
     this.router.navigate(['/paciente', this.pacienteId, 'nova-consulta']);
   }
 
-  reagendar(c: Consulta): void { /* ... */ }
   cancelar(c: Consulta): void {
     c.status = 'cancelada';
     this.definirProximaConsulta();
     this.montarListas();
+  }
+
+  abrirReagendar(c: Consulta): void {
+    this.consultaParaReagendar = c;
+  }
+
+  onReagendado(): void {
+    this.consultaParaReagendar = null;
+    // a assinatura em getConsultas() já atualiza tudo
   }
 }

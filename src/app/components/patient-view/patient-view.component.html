@@ -61,7 +61,7 @@
             <td>{{ item.consulta.data_consulta | date:'shortTime' }}</td>
             <td>{{ item.consulta.status }}</td>
             <td class="text-right space-x-2">
-              <button class="text-yellow-600 hover:underline" (click)="reagendar(item.consulta)">Reagendar</button>
+              <button class="text-yellow-600 hover:underline"(click)="abrirReagendar(item.consulta)">Reagendar</button>
               <button class="text-red-600 hover:underline" (click)="cancelar(item.consulta)">Cancelar</button>
             </td>
           </tr>
@@ -72,4 +72,16 @@
       <p class="text-gray-500">Você não tem consultas agendadas.</p>
     </ng-template>
   </div>
+   <!-- Modal de Reagendamento -->
+<div *ngIf="consultaParaReagendar" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-xl shadow-lg max-w-3xl w-full">
+    <app-reagendar-consulta
+      [consultaOriginal]="consultaParaReagendar"
+      (done)="onReagendado()"
+      (canceled)="consultaParaReagendar = null">
+    </app-reagendar-consulta>
+  </div>
 </div>
+
+</div>
+

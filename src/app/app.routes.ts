@@ -5,6 +5,9 @@ import { MedicoDashboardComponent } from './components/doctor-view/doctor-view.c
 import { MedicoAgendaComponent } from './components/doctor-schedule/doctor-schedule.component';
 import { PatientViewComponent } from './components/patient-view/patient-view.component';
 import { PatientNewAppointment } from './components/patient-new-appointment/patient-new-appointment.component';
+import { RecepcionistaDashboardComponent } from './components/receptionist-view/receptionist-view.component';
+import { RecepcionistaPatientManagementComponent } from './components/receptionist-manager-patients/receptionist-manager-patients.component';
+import { RecepcionistaScheduleWizardComponent } from './components/receptionist-new-appointment/receptionist-new-appointment.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -13,4 +16,7 @@ export const routes: Routes = [
   { path: 'medico/:id/agenda', component: MedicoAgendaComponent },
   { path: 'paciente/:id', component: PatientViewComponent },
   { path: 'paciente/:id/nova-consulta', component: PatientNewAppointment },
+  { path: 'recepcionista/:id', component: RecepcionistaDashboardComponent },
+  { path: 'recepcionista/:id/gerenciar-pacientes', component: RecepcionistaPatientManagementComponent  },
+  { path: 'recepcionista/:id/nova-consulta', component: RecepcionistaScheduleWizardComponent}
 ];

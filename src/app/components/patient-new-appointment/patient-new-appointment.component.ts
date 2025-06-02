@@ -1,6 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { DataService, Medico, Consulta, UsuarioLogado } from '../../services/data-service.service';
+import {
+  DataService,
+  Medico,
+  Consulta,
+  UsuarioLogado,
+} from '../../services/data-service.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -8,7 +13,7 @@ import { FormsModule } from '@angular/forms';
   selector: 'app-nova-consulta',
   templateUrl: './patient-new-appointment.component.html',
   styleUrls: ['./patient-new-appointment.component.css'],
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule],
 })
 export class PatientNewAppointment implements OnInit {
   step = 1;
@@ -21,7 +26,7 @@ export class PatientNewAppointment implements OnInit {
   doctors: Medico[] = [];
   selectedDoctorId: number | null = null;
   get selectedDoctor(): Medico | undefined {
-    return this.doctors.find(d => d.id_medico === this.selectedDoctorId!);
+    return this.doctors.find((d) => d.id_medico === this.selectedDoctorId!);
   }
 
   // Step 3: calendário
@@ -40,19 +45,16 @@ export class PatientNewAppointment implements OnInit {
   allDoctors: Medico[] = [];
   allConsultas: Consulta[] = [];
 
-  constructor(
-    private dataService: DataService,
-    private router: Router
-  ) {}
+  constructor(private dataService: DataService, private router: Router) {}
 
   ngOnInit(): void {
     // carregar médicos e especialidades
-    this.dataService.getMedicos().subscribe(meds => {
+    this.dataService.getMedicos().subscribe((meds) => {
       this.allDoctors = meds;
-      this.specialties = Array.from(new Set(meds.map(d => d.especialidade)));
+      this.specialties = Array.from(new Set(meds.map((d) => d.especialidade)));
     });
     // carregar consultas
-    this.dataService.getConsultas().subscribe(c => {
+    this.dataService.getConsultas().subscribe((c) => {
       this.allConsultas = c;
       this.buildCalendar(new Date());
     });
@@ -61,12 +63,18 @@ export class PatientNewAppointment implements OnInit {
   }
 
   // Wizard
-  nextStep(): void { if (this.step < 5) this.step++; }
-  prevStep(): void { if (this.step > 1) this.step--; }
+  nextStep(): void {
+    if (this.step < 5) this.step++;
+  }
+  prevStep(): void {
+    if (this.step > 1) this.step--;
+  }
 
   // Step 2: filtrar médicos
   onSelectSpecialty(): void {
-    this.doctors = this.allDoctors.filter(d => d.especialidade === this.selectedSpecialty);
+    this.doctors = this.allDoctors.filter(
+      (d) => d.especialidade === this.selectedSpecialty
+    );
     this.selectedDoctorId = null;
   }
 
@@ -124,19 +132,22 @@ export class PatientNewAppointment implements OnInit {
 
   // Step 4: horários disponíveis
   generateTimes(): void {
-    const start = 8, end = 18; // 8h às 18h
+    const start = 8,
+      end = 18; // 8h às 18h
     for (let hour = start; hour < end; hour++) {
-      this.times.push(`${hour.toString().padStart(2,'0')}:00`);
-      this.times.push(`${hour.toString().padStart(2,'0')}:30`);
+      this.times.push(`${hour.toString().padStart(2, '0')}:00`);
+      this.times.push(`${hour.toString().padStart(2, '0')}:30`);
     }
   }
 
   isTimeAvailable(time: string): boolean {
     if (!this.selectedDoctorId) return false;
-    return !this.allConsultas.some(c =>
-      c.id_medico === this.selectedDoctorId &&
-      new Date(c.data_consulta).toDateString() === this.selectedDate.toDateString() &&
-      new Date(c.data_consulta).toTimeString().startsWith(time)
+    return !this.allConsultas.some(
+      (c) =>
+        c.id_medico === this.selectedDoctorId &&
+        new Date(c.data_consulta).toDateString() ===
+          this.selectedDate.toDateString() &&
+        new Date(c.data_consulta).toTimeString().startsWith(time)
     );
   }
 
@@ -145,23 +156,24 @@ export class PatientNewAppointment implements OnInit {
   }
 
   confirmarAgendamento(): void {
-    // criar nova consulta
-    const newId = Math.max(...this.allConsultas.map(c => c.id_consulta)) + 1;
+    const newId = Math.max(...this.allConsultas.map((c) => c.id_consulta)) + 1;
     const [hours, minutes] = this.selectedTime!.split(':').map(Number);
     const dt = new Date(this.selectedDate);
     dt.setHours(hours, minutes, 0, 0);
 
-    const doctorId = this.selectedDoctorId!;
+    const doctorId = Number(this.selectedDoctorId); // conversão explícita
     const currentUser = this.dataService.getUsuarioLogado() as UsuarioLogado;
+
     const novaConsulta: Consulta = {
       id_consulta: newId,
       id_medico: doctorId,
       id_paciente: currentUser.id,
       data_consulta: dt,
-      status: 'agendada'
+      status: 'agendada',
     };
 
-    // adicionar na service
+    console.log('nova consulta:', novaConsulta);
+
     const updated = [...this.allConsultas, novaConsulta];
     (this.dataService as any).consultas$.next(updated);
 
