@@ -2,7 +2,13 @@ import { Component, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DataService, Paciente, Medico, Consulta } from './../../services/data-service.service';
+import {
+  DataService,
+  Paciente,
+  Medico,
+  Consulta,
+  UsuarioLogado
+} from '../../services/data-service.service';
 
 @Component({
   selector: 'app-recepcionista-schedule-wizard',
@@ -15,6 +21,7 @@ export class RecepcionistaScheduleWizardComponent implements OnInit {
   @Input() paciente: Paciente | null = null;
 
   step = 1;
+  pacientes: Paciente[] = [];
   specialties: string[] = [];
   doctors: Medico[] = [];
   consultas: Consulta[] = [];
@@ -34,117 +41,131 @@ export class RecepcionistaScheduleWizardComponent implements OnInit {
   constructor(public dataService: DataService, private router: Router) {}
 
   ngOnInit(): void {
+    // carrega lista de pacientes
+    this.dataService.getPacientes().subscribe(ps => this.pacientes = ps);
+    // carrega consultas para bloquear horários
     this.dataService.getConsultas().subscribe(cs => this.consultas = cs);
+    // carrega especialidades
     this.dataService.getMedicos().subscribe(ms => {
       this.specialties = Array.from(new Set(ms.map(m => m.especialidade)));
     });
+    // se vier paciente por @Input, pula passo 1
     if (this.paciente) {
       this.selectedPaciente = this.paciente;
       this.step = 2;
     }
   }
 
-  /** Labels for wizard steps */
   getStepLabels(): string[] {
     const labels = ['Paciente','Especialidade','Médico','Data','Horário','Resumo'];
     return this.paciente ? labels.slice(1) : labels;
   }
 
-  /** When specialty selected, load doctors */
   onSelectSpecialty(): void {
     this.dataService.getMedicos().subscribe(ms => {
       this.doctors = ms.filter(m => m.especialidade === this.selectedSpecialty);
     });
   }
 
-  /** Prepare calendar days */
-  generateCalendar(offset = 0): void {
-    const today = this.selectedDate || new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth() + offset;
+  // Calendário
+  private buildCalendar(date: Date): void {
+    const year = date.getFullYear();
+    const month = date.getMonth();
     const first = new Date(year, month, 1);
     const start = first.getDay();
+    const lastDay = new Date(year, month+1, 0).getDate();
+
     this.calendarDays = [];
-    for (let i = start - 1; i >= 0; i--) {
-      const d = new Date(year, month, -i);
-      this.calendarDays.push({ date: d, currentMonth: false });
+    // dias do mês anterior
+    for (let i = start-1; i>=0; i--) {
+      this.calendarDays.push({ date: new Date(year, month, -i), currentMonth: false });
     }
-    const last = new Date(year, month + 1, 0).getDate();
-    for (let d = 1; d <= last; d++) {
+    // deste mês
+    for (let d=1; d<= lastDay; d++) {
       this.calendarDays.push({ date: new Date(year, month, d), currentMonth: true });
     }
   }
 
-  /** Select a date */
+  nextMonth(): void {
+    if (!this.selectedDate) this.selectedDate = new Date();
+    const m = new Date(this.selectedDate);
+    m.setMonth(m.getMonth()+1);
+    this.selectedDate = m;
+    this.buildCalendar(m);
+  }
+
+  prevMonth(): void {
+    if (!this.selectedDate) this.selectedDate = new Date();
+    const m = new Date(this.selectedDate);
+    m.setMonth(m.getMonth()-1);
+    this.selectedDate = m;
+    this.buildCalendar(m);
+  }
+
   selectDate(date: Date): void {
     this.selectedDate = date;
   }
 
-  /** Select a time slot */
-  selectTime(time: string): void {
-    this.selectedTime = time;
-  }
-
-  /** Check if date is selected */
   isSelected(date: Date): boolean {
     return this.selectedDate !== null && date.toDateString() === this.selectedDate.toDateString();
   }
 
-  /** Check if time slot is available */
+  selectTime(time: string): void {
+    this.selectedTime = time;
+  }
+
   isTimeAvailable(time: string): boolean {
     if (!this.selectedDoctorId || !this.selectedDate) return false;
     return !this.consultas.some(c => {
       const dt = new Date(c.data_consulta);
-      const h = dt.getHours().toString().padStart(2, '0');
-      const m = dt.getMinutes().toString().padStart(2, '0');
-      return c.id_medico === this.selectedDoctorId &&
-             dt.toDateString() === this.selectedDate!.toDateString() &&
-             `${h}:${m}` === time;
+      const hh = dt.getHours().toString().padStart(2,'0');
+      const mm = dt.getMinutes().toString().padStart(2,'0');
+      return c.id_medico === this.selectedDoctorId
+          && dt.toDateString() === this.selectedDate!.toDateString()
+          && `${hh}:${mm}` === time;
     });
   }
 
-  /** Proceed to next step */
   nextStep(): void {
-    if (!this.paciente && this.step === 1) {
-      this.step = 2;
+    if ((this.step === 4 || this.step === 5) && !this.selectedDate) {
       return;
     }
-    if ((this.paciente && this.step === 1) || (!this.paciente && this.step === 2)) {
-      this.generateCalendar();
+    if (this.step === 4 && this.selectedDate) {
+      this.buildCalendar(this.selectedDate);
     }
     this.step++;
   }
 
-  /** Go back to previous step */
   prevStep(): void {
     this.step--;
   }
 
-  /** Get selected doctor name */
   getDoctorName(): string {
     const doc = this.doctors.find(d => d.id_medico === this.selectedDoctorId);
     return doc ? doc.nome : '';
   }
 
-  /** Confirm and save appointment */
   confirmarAgendamento(): void {
-    if (!this.selectedPaciente || !this.selectedDoctorId || !this.selectedDate || !this.selectedTime) return;
-    const [h, m] = this.selectedTime.split(':');
+    if (!this.selectedPaciente || !this.selectedDoctorId || !this.selectedDate || !this.selectedTime) {
+      return;
+    }
+    const [h, m] = this.selectedTime.split(':').map(n => +n);
     const dt = new Date(this.selectedDate);
-    dt.setHours(+h, +m, 0, 0);
-    this.dataService.addConsulta({
+    dt.setHours(h, m, 0, 0);
+
+    const nova: Consulta = {
       id_consulta: Date.now(),
       id_paciente: this.selectedPaciente.id_paciente,
       id_medico: this.selectedDoctorId,
       data_consulta: dt,
       status: 'agendada'
-    });
+    };
+    this.dataService.addConsulta(nova);
     this.showConfirmation = true;
   }
 
-  /** Navigate back to dashboard */
   voltarDashboard(): void {
-    const user = this.dataService.getUsuarioLogado();
-    this.router.navigate(['/recepcionista', user!.id]);
+    const user = this.dataService.getUsuarioLogado()!;
+    this.router.navigate(['/recepcionista', user.id]);
   }
 }

@@ -169,30 +169,6 @@ export class MedicoAgendaComponent implements OnInit {
     this.acaoPendencia = null;
   }
 
-  reagendar(consulta: Consulta): void {
-    this.consultaParaReagendar = consulta;
-
-    const dt = new Date(consulta.data_consulta);
-    this.novaData = dt.toISOString().slice(0, 10);
-    this.novoHorario = dt.toTimeString().slice(0, 5);
-  }
-  fecharReagendamento(): void {
-  this.consultaParaReagendar = null;
-  this.novaData = '';
-  this.novoHorario = '';
-}
-
-confirmarReagendamento(): void {
-  if (!this.consultaParaReagendar) return;
-
-  const novaDataHora = new Date(`${this.novaData}T${this.novoHorario}`);
-  this.consultaParaReagendar.data_consulta = novaDataHora;
-
-
-  this.updateDailyConsultas();
-  this.fecharReagendamento();
-}
-
   goBack(): void {
     this.router.navigate(['/medico', this.medicoId]);
   }

@@ -8,7 +8,8 @@ import {
   UsuarioLogado
 } from '../../services/data-service.service';
 import { CommonModule } from '@angular/common';
-import { ReagendarConsultaComponent } from '../../ch-appointment.com/ch-appointment.component';
+import { ReagendarConsultaComponent } from '../ch-appointment.com/ch-appointment.component';
+
 
 interface ConsultaExibicao {
   consulta: Consulta;

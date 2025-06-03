@@ -8,12 +8,23 @@ import {
 } from '../../services/data-service.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
+import { trigger, style, animate, transition } from '@angular/animations';
 @Component({
   selector: 'app-nova-consulta',
   templateUrl: './patient-new-appointment.component.html',
   styleUrls: ['./patient-new-appointment.component.css'],
   imports: [CommonModule, FormsModule],
+   animations: [
+    trigger('modalAnimation', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'scale(0.8)' }),
+        animate('300ms ease-out', style({ opacity: 1, transform: 'scale(1)' }))
+      ]),
+      transition(':leave', [
+        animate('200ms ease-in', style({ opacity: 0, transform: 'scale(0.8)' }))
+      ]),
+    ]),
+  ]
 })
 export class PatientNewAppointment implements OnInit {
   step = 1;

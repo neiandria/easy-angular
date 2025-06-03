@@ -56,19 +56,18 @@ export interface Historico {
   id_consulta: number;
 }
 
-// ======= DataService =======
+
 @Injectable({ providedIn: 'root' })
 export class DataService {
   private readonly USER_KEY = 'usuarioLogado';
 
-  // BehaviorSubjects to hold data in memory
+ 
   private pacientes$ = new BehaviorSubject<Paciente[]>([]);
   private medicos$ = new BehaviorSubject<Medico[]>([]);
   private usuarios$ = new BehaviorSubject<Usuario[]>([]);
   private consultas$ = new BehaviorSubject<Consulta[]>([]);
   private historico$ = new BehaviorSubject<Historico[]>([]);
 
-  // BehaviorSubject para o usuário logado (login persistente reativo)
   private usuarioLogadoSubject = new BehaviorSubject<UsuarioLogado | null>(
     this.getUsuarioLogadoFromStorage()
   );
@@ -78,7 +77,7 @@ export class DataService {
   }
 
   private loadInitialData() {
-    // Predefined Pacientes
+ 
     const pacientes: Paciente[] = [
       {
         id_paciente: 1,
@@ -112,7 +111,7 @@ export class DataService {
       },
     ];
 
-    // Predefined Medicos
+  
     const medicos: Medico[] = [
       {
         id_medico: 1,

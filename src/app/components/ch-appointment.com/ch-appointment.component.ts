@@ -3,7 +3,7 @@ import {
   DataService,
   Consulta,
   UsuarioLogado,
-} from '../services/data-service.service';
+} from '../../services/data-service.service';
 import { CommonModule } from '@angular/common';
 
 @Component({

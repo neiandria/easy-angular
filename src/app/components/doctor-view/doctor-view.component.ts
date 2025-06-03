@@ -8,6 +8,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
+import { trigger, style, animate, transition, query, stagger } from '@angular/animations';
 
 interface ConsultaExibicao {
   consulta: Consulta;
@@ -19,6 +20,27 @@ interface ConsultaExibicao {
   templateUrl: './doctor-view.component.html',
   styleUrls: ['./doctor-view.component.css'],
   imports: [CommonModule, RouterModule],
+  animations: [
+    trigger('cardStagger', [
+      transition(':enter', [
+        query('.info-card', [
+          style({ opacity: 0, transform: 'translateY(20px)' }),
+          stagger(100, [
+            animate('300ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+          ])
+        ], { optional: true })
+      ])
+    ]),
+    trigger('fadeInModal', [
+      transition(':enter', [
+        style({ opacity: 0 }),
+        animate('200ms ease-out', style({ opacity: 1 }))
+      ]),
+      transition(':leave', [
+        animate('150ms ease-in', style({ opacity: 0 }))
+      ])
+    ])
+  ]
 
 })
 export class MedicoDashboardComponent implements OnInit {
@@ -136,9 +158,7 @@ export class MedicoDashboardComponent implements OnInit {
     this.montarListas();
   }
 
-  reagendar(consulta: Consulta): void {
-    console.log('Reagendar', consulta.id_consulta);
-  }
+  
   abrirConfirmacao(consulta: Consulta): void {
     const paciente = this.pacientesMap.get(consulta.id_paciente);
     if (paciente) {
