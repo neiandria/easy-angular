@@ -1,5 +1,4 @@
 import { Component, input } from '@angular/core';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-feature-card',

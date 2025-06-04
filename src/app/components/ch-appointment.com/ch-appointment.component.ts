@@ -1,4 +1,5 @@
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
+import { switchMap } from 'rxjs/operators';
 import {
   DataService,
   Consulta,
@@ -18,8 +19,6 @@ export class ReagendarConsultaComponent implements OnInit {
   @Output() canceled = new EventEmitter<void>();
 
   selectedDate = new Date();
-  displayMonth!: string;
-  displayYear!: number;
   weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   calendarDays: { date: Date; currentMonth: boolean }[] = [];
 
@@ -43,46 +42,49 @@ export class ReagendarConsultaComponent implements OnInit {
       );
   }
 
-  private buildCalendar(d: Date): void {
+  private buildCalendar(d: Date) {
     const y = d.getFullYear(),
       m = d.getMonth();
-    this.displayMonth = d.toLocaleString('pt-BR', { month: 'long' });
-    this.displayYear = y;
     const first = new Date(y, m, 1),
       last = new Date(y, m + 1, 0);
     const start = first.getDay(),
       total = last.getDate();
+
     this.calendarDays = [];
-    for (let i = start - 1; i >= 0; i--)
+    for (let i = start - 1; i >= 0; i--) {
       this.calendarDays.push({ date: new Date(y, m, -i), currentMonth: false });
-    for (let i = 1; i <= total; i++)
+    }
+    for (let i = 1; i <= total; i++) {
       this.calendarDays.push({ date: new Date(y, m, i), currentMonth: true });
+    }
     const rem = 42 - this.calendarDays.length;
-    for (let i = 1; i <= rem; i++)
+    for (let i = 1; i <= rem; i++) {
       this.calendarDays.push({
         date: new Date(y, m + 1, i),
         currentMonth: false,
       });
+    }
   }
 
-  prevMonth() {
-    const d = new Date(this.selectedDate);
-    d.setMonth(d.getMonth() - 1);
-    this.selectedDate = d;
-    this.buildCalendar(d);
-  }
-  nextMonth() {
-    const d = new Date(this.selectedDate);
-    d.setMonth(d.getMonth() + 1);
-    this.selectedDate = d;
-    this.buildCalendar(d);
-  }
   selectDate(dt: Date) {
     this.selectedDate = dt;
     this.selectedTime = null;
   }
   isSelected(dt: Date) {
     return dt.toDateString() === this.selectedDate.toDateString();
+  }
+
+  prevMonth() {
+    this.shiftMonth(-1);
+  }
+  nextMonth() {
+    this.shiftMonth(1);
+  }
+  private shiftMonth(offset: number) {
+    const d = new Date(this.selectedDate);
+    d.setMonth(d.getMonth() + offset);
+    this.selectedDate = d;
+    this.buildCalendar(d);
   }
 
   private generateTimes() {
@@ -96,8 +98,8 @@ export class ReagendarConsultaComponent implements OnInit {
     return !this.allConsultas.some((c) => {
       const dt = new Date(c.data_consulta);
       return (
-        c.status === 'agendada' && // Só bloqueia se estiver agendada
-        c.id_consulta !== this.consultaOriginal.id_consulta && // Ignora a consulta original
+        c.status === 'agendada' &&
+        c.id_consulta !== this.consultaOriginal.id_consulta &&
         dt.toDateString() === this.selectedDate.toDateString() &&
         dt.toTimeString().startsWith(t)
       );
@@ -105,33 +107,55 @@ export class ReagendarConsultaComponent implements OnInit {
   }
 
   selectTime(t: string) {
-    if (this.isTimeAvailable(t)) this.selectedTime = t;
+    if (this.isTimeAvailable(t)) {
+      this.selectedTime = t;
+    }
   }
 
   cancel() {
     this.canceled.emit();
   }
 
+  private formatToMySQL(dt: Date): string {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return (
+      `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}` +
+      ` ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`
+    );
+  }
+
   confirm() {
     const [h, m] = this.selectedTime!.split(':').map(Number);
-    const dt = new Date(this.selectedDate);
-    dt.setHours(h, m, 0, 0);
+    const novaData = new Date(this.selectedDate);
+    novaData.setHours(h, m, 0, 0);
+
     const user = this.dataService.getUsuarioLogado()! as UsuarioLogado;
 
-    // Cancela original
-    this.consultaOriginal.status = 'cancelada';
-
-    // Cria nova
-    const newId = Math.max(...this.allConsultas.map((c) => c.id_consulta)) + 1;
-    const nova: Consulta = {
-      id_consulta: newId,
-      id_medico: this.consultaOriginal.id_medico,
-      id_paciente: user.id,
-      data_consulta: dt,
-      status: 'agendada',
+    const originalUpdate: Consulta = {
+      ...this.consultaOriginal,
+      data_consulta: this.formatToMySQL(
+        new Date(this.consultaOriginal.data_consulta)
+      ) as any,
+      status: 'cancelada',
     };
-    this.dataService.addConsulta(nova);
 
-    this.done.emit();
+    this.dataService
+      .updateConsulta(originalUpdate)
+      .pipe(
+        switchMap(() => {
+          const nova: Consulta = {
+            id_consulta: 0,
+            id_medico: this.consultaOriginal.id_medico,
+            id_paciente: user.id,
+            data_consulta: this.formatToMySQL(novaData) as any,
+            status: 'agendada',
+          };
+          return this.dataService.addConsulta(nova);
+        })
+      )
+      .subscribe({
+        next: () => this.done.emit(),
+        error: (err) => console.error('Erro no reagendamento', err),
+      });
   }
 }

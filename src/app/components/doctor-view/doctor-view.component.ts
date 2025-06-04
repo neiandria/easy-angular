@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { combineLatest } from 'rxjs';
+
 import {
   DataService,
   Consulta,
@@ -8,7 +10,14 @@ import {
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
-import { trigger, style, animate, transition, query, stagger } from '@angular/animations';
+import {
+  trigger,
+  style,
+  animate,
+  transition,
+  query,
+  stagger,
+} from '@angular/animations';
 
 interface ConsultaExibicao {
   consulta: Consulta;
@@ -23,25 +32,29 @@ interface ConsultaExibicao {
   animations: [
     trigger('cardStagger', [
       transition(':enter', [
-        query('.info-card', [
-          style({ opacity: 0, transform: 'translateY(20px)' }),
-          stagger(100, [
-            animate('300ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
-          ])
-        ], { optional: true })
-      ])
+        query(
+          '.info-card',
+          [
+            style({ opacity: 0, transform: 'translateY(20px)' }),
+            stagger(100, [
+              animate(
+                '300ms ease-out',
+                style({ opacity: 1, transform: 'translateY(0)' })
+              ),
+            ]),
+          ],
+          { optional: true }
+        ),
+      ]),
     ]),
     trigger('fadeInModal', [
       transition(':enter', [
         style({ opacity: 0 }),
-        animate('200ms ease-out', style({ opacity: 1 }))
+        animate('200ms ease-out', style({ opacity: 1 })),
       ]),
-      transition(':leave', [
-        animate('150ms ease-in', style({ opacity: 0 }))
-      ])
-    ])
-  ]
-
+      transition(':leave', [animate('150ms ease-in', style({ opacity: 0 }))]),
+    ]),
+  ],
 })
 export class MedicoDashboardComponent implements OnInit {
   medicoId: number = 0;
@@ -57,6 +70,7 @@ export class MedicoDashboardComponent implements OnInit {
   minhasConsultas: ConsultaExibicao[] = [];
 
   consultaParaConfirmar: ConsultaExibicao | null = null;
+  acaoPendencia: 'confirmar' | 'cancelar' = 'confirmar';
 
   constructor(
     private dataService: DataService,
@@ -67,21 +81,20 @@ export class MedicoDashboardComponent implements OnInit {
   ngOnInit(): void {
     this.medicoId = Number(this.route.snapshot.paramMap.get('id'));
 
-    // Buscar dados do médico logado
     this.dataService.getMedicos().subscribe((medicos) => {
       this.medico = medicos.find((m) => m.id_medico === this.medicoId);
     });
 
-    // Carregar pacientes
-    this.dataService.getPacientes().subscribe((pacientes) => {
+    combineLatest([
+      this.dataService.getPacientes(),
+      this.dataService.getConsultas(),
+    ]).subscribe(([pacientes, consultas]) => {
       pacientes.forEach((p) => this.pacientesMap.set(p.id_paciente, p));
-    });
 
-    // Carregar consultas e filtrar por médico
-    this.dataService.getConsultas().subscribe((consultas) => {
       this.todasConsultas = consultas.filter(
         (c) => c.id_medico === this.medicoId
       );
+
       this.definirEstatisticas();
       this.montarListas();
     });
@@ -110,15 +123,13 @@ export class MedicoDashboardComponent implements OnInit {
     });
 
     this.totalPacientes = new Set(
-  this.todasConsultas
-    .filter((c) => c.id_paciente != null)
-    .map((c) => c.id_paciente)
-).size;
-
+      this.todasConsultas
+        .filter((c) => c.id_paciente != null)
+        .map((c) => c.id_paciente)
+    ).size;
   }
 
   private montarListas(): void {
-    // Próxima consulta futura
     const futuras = this.todasConsultas
       .filter((c) => new Date(c.data_consulta) > new Date())
       .sort(
@@ -129,13 +140,12 @@ export class MedicoDashboardComponent implements OnInit {
 
     if (futuras.length) {
       const c = futuras[0];
-      this.consultaMaisProxima = {
-        consulta: c,
-        paciente: this.pacientesMap.get(c.id_paciente)!,
-      };
+      const paciente = this.pacientesMap.get(c.id_paciente)!;
+      this.consultaMaisProxima = { consulta: c, paciente };
+    } else {
+      this.consultaMaisProxima = null;
     }
 
-    // Lista completa para exibição
     this.minhasConsultas = this.todasConsultas.map((c) => ({
       consulta: c,
       paciente: this.pacientesMap.get(c.id_paciente)!,
@@ -150,19 +160,11 @@ export class MedicoDashboardComponent implements OnInit {
     );
   }
 
-  cancelar(consulta: Consulta): void {
-    // Atualiza status localmente
-    consulta.status = 'cancelada';
-    // Opcional: atualizar service via método específico
-    this.definirEstatisticas();
-    this.montarListas();
-  }
-
-  
-  abrirConfirmacao(consulta: Consulta): void {
+  abrirConfirmacao(consulta: Consulta, acao: 'confirmar' | 'cancelar'): void {
     const paciente = this.pacientesMap.get(consulta.id_paciente);
     if (paciente) {
       this.consultaParaConfirmar = { consulta, paciente };
+      this.acaoPendencia = acao;
     }
   }
 
@@ -171,11 +173,27 @@ export class MedicoDashboardComponent implements OnInit {
   }
 
   confirmarConsulta(): void {
-    if (this.consultaParaConfirmar) {
-      this.consultaParaConfirmar.consulta.status = 'realizada';
-      this.fecharConfirmacao();
-      this.definirEstatisticas();
-      this.montarListas();
-    }
+    if (!this.consultaParaConfirmar) return;
+
+    const { consulta } = this.consultaParaConfirmar;
+    const novoStatus: 'realizada' | 'cancelada' =
+      this.acaoPendencia === 'cancelar' ? 'cancelada' : 'realizada';
+
+    const consultaAtualizada: Consulta = {
+      ...consulta,
+      status: novoStatus,
+    };
+
+    this.dataService.updateConsulta(consultaAtualizada).subscribe({
+      next: () => {
+        this.consultaParaConfirmar!.consulta.status = novoStatus;
+        this.definirEstatisticas();
+        this.montarListas();
+        this.fecharConfirmacao();
+      },
+      error: (err) => {
+        console.error(`Erro ao ${this.acaoPendencia} consulta:`, err);
+      },
+    });
   }
 }

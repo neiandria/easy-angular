@@ -1,7 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
-import { DataService, UsuarioLogado } from '../../services/data-service.service';
+import {
+  DataService,
+  UsuarioLogado,
+} from '../../services/data-service.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -18,13 +21,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
   constructor(private router: Router, private dataService: DataService) {}
 
   ngOnInit(): void {
-    // Inscreve para receber atualizações do usuário logado
-    this.subscription = this.dataService.getUsuarioLogado$().subscribe(user => {
-      this.currentUser = user;
-      if (!user) {
-        this.dropdownOpen = false; // Fecha dropdown ao logout
-      }
-    });
+    this.subscription = this.dataService
+      .getUsuarioLogado$()
+      .subscribe((user) => {
+        this.currentUser = user;
+        if (!user) {
+          this.dropdownOpen = false;
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -37,7 +41,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   logout(): void {
     this.dataService.logout();
-    // currentUser será atualizado automaticamente pelo BehaviorSubject
+
     this.router.navigate(['/login']);
   }
 

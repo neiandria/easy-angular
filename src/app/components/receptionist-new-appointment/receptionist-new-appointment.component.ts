@@ -7,7 +7,7 @@ import {
   Paciente,
   Medico,
   Consulta,
-  UsuarioLogado
+  UsuarioLogado,
 } from '../../services/data-service.service';
 
 @Component({
@@ -15,7 +15,7 @@ import {
   templateUrl: './receptionist-new-appointment.component.html',
   styleUrls: ['./receptionist-new-appointment.component.css'],
   standalone: true,
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule],
 })
 export class RecepcionistaScheduleWizardComponent implements OnInit {
   @Input() paciente: Paciente | null = null;
@@ -32,24 +32,32 @@ export class RecepcionistaScheduleWizardComponent implements OnInit {
   selectedDate: Date | null = null;
   selectedTime: string | null = null;
 
-  weekDays = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   calendarDays: { date: Date; currentMonth: boolean }[] = [];
-  times: string[] = ['08:00','09:00','10:00','11:00','13:00','14:00','15:00','16:00'];
+  times: string[] = [
+    '08:00',
+    '09:00',
+    '10:00',
+    '11:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+  ];
 
   showConfirmation = false;
 
   constructor(public dataService: DataService, private router: Router) {}
 
   ngOnInit(): void {
-    // carrega lista de pacientes
-    this.dataService.getPacientes().subscribe(ps => this.pacientes = ps);
-    // carrega consultas para bloquear horários
-    this.dataService.getConsultas().subscribe(cs => this.consultas = cs);
-    // carrega especialidades
-    this.dataService.getMedicos().subscribe(ms => {
-      this.specialties = Array.from(new Set(ms.map(m => m.especialidade)));
+    this.dataService.getPacientes().subscribe((ps) => (this.pacientes = ps));
+
+    this.dataService.getConsultas().subscribe((cs) => (this.consultas = cs));
+
+    this.dataService.getMedicos().subscribe((ms) => {
+      this.specialties = Array.from(new Set(ms.map((m) => m.especialidade)));
     });
-    // se vier paciente por @Input, pula passo 1
+
     if (this.paciente) {
       this.selectedPaciente = this.paciente;
       this.step = 2;
@@ -57,39 +65,53 @@ export class RecepcionistaScheduleWizardComponent implements OnInit {
   }
 
   getStepLabels(): string[] {
-    const labels = ['Paciente','Especialidade','Médico','Data','Horário','Resumo'];
+    const labels = [
+      'Paciente',
+      'Especialidade',
+      'Médico',
+      'Data',
+      'Horário',
+      'Resumo',
+    ];
     return this.paciente ? labels.slice(1) : labels;
   }
 
   onSelectSpecialty(): void {
-    this.dataService.getMedicos().subscribe(ms => {
-      this.doctors = ms.filter(m => m.especialidade === this.selectedSpecialty);
+    this.dataService.getMedicos().subscribe((ms) => {
+      this.doctors = ms.filter(
+        (m) => m.especialidade === this.selectedSpecialty
+      );
     });
   }
 
-  // Calendário
   private buildCalendar(date: Date): void {
     const year = date.getFullYear();
     const month = date.getMonth();
     const first = new Date(year, month, 1);
     const start = first.getDay();
-    const lastDay = new Date(year, month+1, 0).getDate();
+    const lastDay = new Date(year, month + 1, 0).getDate();
 
     this.calendarDays = [];
-    // dias do mês anterior
-    for (let i = start-1; i>=0; i--) {
-      this.calendarDays.push({ date: new Date(year, month, -i), currentMonth: false });
+
+    for (let i = start - 1; i >= 0; i--) {
+      this.calendarDays.push({
+        date: new Date(year, month, -i),
+        currentMonth: false,
+      });
     }
-    // deste mês
-    for (let d=1; d<= lastDay; d++) {
-      this.calendarDays.push({ date: new Date(year, month, d), currentMonth: true });
+
+    for (let d = 1; d <= lastDay; d++) {
+      this.calendarDays.push({
+        date: new Date(year, month, d),
+        currentMonth: true,
+      });
     }
   }
 
   nextMonth(): void {
     if (!this.selectedDate) this.selectedDate = new Date();
     const m = new Date(this.selectedDate);
-    m.setMonth(m.getMonth()+1);
+    m.setMonth(m.getMonth() + 1);
     this.selectedDate = m;
     this.buildCalendar(m);
   }
@@ -97,7 +119,7 @@ export class RecepcionistaScheduleWizardComponent implements OnInit {
   prevMonth(): void {
     if (!this.selectedDate) this.selectedDate = new Date();
     const m = new Date(this.selectedDate);
-    m.setMonth(m.getMonth()-1);
+    m.setMonth(m.getMonth() - 1);
     this.selectedDate = m;
     this.buildCalendar(m);
   }
@@ -107,7 +129,10 @@ export class RecepcionistaScheduleWizardComponent implements OnInit {
   }
 
   isSelected(date: Date): boolean {
-    return this.selectedDate !== null && date.toDateString() === this.selectedDate.toDateString();
+    return (
+      this.selectedDate !== null &&
+      date.toDateString() === this.selectedDate.toDateString()
+    );
   }
 
   selectTime(time: string): void {
@@ -116,13 +141,15 @@ export class RecepcionistaScheduleWizardComponent implements OnInit {
 
   isTimeAvailable(time: string): boolean {
     if (!this.selectedDoctorId || !this.selectedDate) return false;
-    return !this.consultas.some(c => {
+    return !this.consultas.some((c) => {
       const dt = new Date(c.data_consulta);
-      const hh = dt.getHours().toString().padStart(2,'0');
-      const mm = dt.getMinutes().toString().padStart(2,'0');
-      return c.id_medico === this.selectedDoctorId
-          && dt.toDateString() === this.selectedDate!.toDateString()
-          && `${hh}:${mm}` === time;
+      const hh = dt.getHours().toString().padStart(2, '0');
+      const mm = dt.getMinutes().toString().padStart(2, '0');
+      return (
+        c.id_medico === this.selectedDoctorId &&
+        dt.toDateString() === this.selectedDate!.toDateString() &&
+        `${hh}:${mm}` === time
+      );
     });
   }
 
@@ -141,15 +168,20 @@ export class RecepcionistaScheduleWizardComponent implements OnInit {
   }
 
   getDoctorName(): string {
-    const doc = this.doctors.find(d => d.id_medico === this.selectedDoctorId);
+    const doc = this.doctors.find((d) => d.id_medico === this.selectedDoctorId);
     return doc ? doc.nome : '';
   }
 
   confirmarAgendamento(): void {
-    if (!this.selectedPaciente || !this.selectedDoctorId || !this.selectedDate || !this.selectedTime) {
+    if (
+      !this.selectedPaciente ||
+      !this.selectedDoctorId ||
+      !this.selectedDate ||
+      !this.selectedTime
+    ) {
       return;
     }
-    const [h, m] = this.selectedTime.split(':').map(n => +n);
+    const [h, m] = this.selectedTime.split(':').map((n) => +n);
     const dt = new Date(this.selectedDate);
     dt.setHours(h, m, 0, 0);
 
@@ -158,10 +190,18 @@ export class RecepcionistaScheduleWizardComponent implements OnInit {
       id_paciente: this.selectedPaciente.id_paciente,
       id_medico: this.selectedDoctorId,
       data_consulta: dt,
-      status: 'agendada'
+      status: 'agendada',
     };
-    this.dataService.addConsulta(nova);
-    this.showConfirmation = true;
+
+    this.dataService.addConsulta(nova).subscribe({
+      next: () => {
+        this.showConfirmation = true;
+        console.log('Consulta agendada com sucesso');
+      },
+      error: (err) => {
+        console.error('Erro ao agendar consulta', err);
+      },
+    });
   }
 
   voltarDashboard(): void {

@@ -5,11 +5,10 @@ import {
   Consulta,
   Medico,
   Paciente,
-  UsuarioLogado
+  UsuarioLogado,
 } from '../../services/data-service.service';
 import { CommonModule } from '@angular/common';
 import { ReagendarConsultaComponent } from '../ch-appointment.com/ch-appointment.component';
-
 
 interface ConsultaExibicao {
   consulta: Consulta;
@@ -20,7 +19,7 @@ interface ConsultaExibicao {
   selector: 'app-paciente-dashboard',
   templateUrl: './patient-view.component.html',
   styleUrls: ['./patient-view.component.css'],
-  imports: [CommonModule, ReagendarConsultaComponent]
+  imports: [CommonModule, ReagendarConsultaComponent],
 })
 export class PatientViewComponent implements OnInit {
   pacienteId = 0;
@@ -33,13 +32,9 @@ export class PatientViewComponent implements OnInit {
   diasParaProxima = 0;
   minhasConsultas: ConsultaExibicao[] = [];
 
-  // controla o modal de reagendamento
   consultaParaReagendar: Consulta | null = null;
 
-  constructor(
-    private dataService: DataService,
-    private router: Router,
-  ) {}
+  constructor(private dataService: DataService, private router: Router) {}
 
   ngOnInit(): void {
     const user = this.dataService.getUsuarioLogado();
@@ -49,16 +44,18 @@ export class PatientViewComponent implements OnInit {
     }
     this.pacienteId = user.id;
 
-    this.dataService.getPacienteById(this.pacienteId)
-      .subscribe(p => this.paciente = p || null);
+    this.dataService
+      .getPacienteById(this.pacienteId)
+      .subscribe((p) => (this.paciente = p || null));
 
-    this.dataService.getMedicos().subscribe(meds =>
-      meds.forEach(m => this.medicosMap.set(m.id_medico, m))
-    );
+    this.dataService
+      .getMedicos()
+      .subscribe((meds) =>
+        meds.forEach((m) => this.medicosMap.set(m.id_medico, m))
+      );
 
-    // inscrição reativa em todas as consultas
-    this.dataService.getConsultas().subscribe(all => {
-      this.consultas = all.filter(c => c.id_paciente === this.pacienteId);
+    this.dataService.getConsultas().subscribe((all) => {
+      this.consultas = all.filter((c) => c.id_paciente === this.pacienteId);
       this.definirProximaConsulta();
       this.montarListas();
     });
@@ -66,9 +63,11 @@ export class PatientViewComponent implements OnInit {
 
   private definirProximaConsulta(): void {
     const futuras = this.consultas
-      .filter(c => new Date(c.data_consulta) > new Date())
-      .sort((a, b) =>
-        new Date(a.data_consulta).getTime() - new Date(b.data_consulta).getTime()
+      .filter((c) => new Date(c.data_consulta) > new Date())
+      .sort(
+        (a, b) =>
+          new Date(a.data_consulta).getTime() -
+          new Date(b.data_consulta).getTime()
       );
     if (futuras.length) {
       const c = futuras[0];
@@ -85,10 +84,12 @@ export class PatientViewComponent implements OnInit {
 
   private montarListas(): void {
     this.minhasConsultas = this.consultas
-      .sort((a, b) =>
-        new Date(a.data_consulta).getTime() - new Date(b.data_consulta).getTime()
+      .sort(
+        (a, b) =>
+          new Date(a.data_consulta).getTime() -
+          new Date(b.data_consulta).getTime()
       )
-      .map(c => {
+      .map((c) => {
         const m = this.medicosMap.get(c.id_medico);
         return m ? { consulta: c, medico: m } : null;
       })
@@ -100,9 +101,17 @@ export class PatientViewComponent implements OnInit {
   }
 
   cancelar(c: Consulta): void {
-    c.status = 'cancelada';
-    this.definirProximaConsulta();
-    this.montarListas();
+    const consultaAtualizada: Consulta = {
+      ...c,
+      status: 'cancelada' as const,
+    };
+
+    this.dataService.updateConsulta(consultaAtualizada).subscribe({
+      next: () => {},
+      error: (err) => {
+        console.error('Erro ao cancelar consulta:', err);
+      },
+    });
   }
 
   abrirReagendar(c: Consulta): void {
@@ -111,6 +120,5 @@ export class PatientViewComponent implements OnInit {
 
   onReagendado(): void {
     this.consultaParaReagendar = null;
-    // a assinatura em getConsultas() já atualiza tudo
   }
 }

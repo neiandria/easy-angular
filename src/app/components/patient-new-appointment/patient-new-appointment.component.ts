@@ -9,71 +9,68 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { trigger, style, animate, transition } from '@angular/animations';
+
 @Component({
   selector: 'app-nova-consulta',
   templateUrl: './patient-new-appointment.component.html',
   styleUrls: ['./patient-new-appointment.component.css'],
+  standalone: true,
   imports: [CommonModule, FormsModule],
-   animations: [
+  animations: [
     trigger('modalAnimation', [
       transition(':enter', [
         style({ opacity: 0, transform: 'scale(0.8)' }),
-        animate('300ms ease-out', style({ opacity: 1, transform: 'scale(1)' }))
+        animate('300ms ease-out', style({ opacity: 1, transform: 'scale(1)' })),
       ]),
       transition(':leave', [
-        animate('200ms ease-in', style({ opacity: 0, transform: 'scale(0.8)' }))
+        animate(
+          '200ms ease-in',
+          style({ opacity: 0, transform: 'scale(0.8)' })
+        ),
       ]),
     ]),
-  ]
+  ],
 })
 export class PatientNewAppointment implements OnInit {
   step = 1;
 
-  // Step 1
   specialties: string[] = [];
   selectedSpecialty: string | null = null;
 
-  // Step 2
   doctors: Medico[] = [];
   selectedDoctorId: number | null = null;
   get selectedDoctor(): Medico | undefined {
     return this.doctors.find((d) => d.id_medico === this.selectedDoctorId!);
   }
 
-  // Step 3: calendário
   selectedDate: Date = new Date();
   weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   calendarDays: { date: Date; currentMonth: boolean }[] = [];
 
-  // Step 4
   times: string[] = [];
   selectedTime: string | null = null;
 
-  // Confirmation
   showConfirmation = false;
 
-  // Dados carregados
   allDoctors: Medico[] = [];
   allConsultas: Consulta[] = [];
 
   constructor(private dataService: DataService, private router: Router) {}
 
   ngOnInit(): void {
-    // carregar médicos e especialidades
     this.dataService.getMedicos().subscribe((meds) => {
       this.allDoctors = meds;
       this.specialties = Array.from(new Set(meds.map((d) => d.especialidade)));
     });
-    // carregar consultas
+
     this.dataService.getConsultas().subscribe((c) => {
       this.allConsultas = c;
       this.buildCalendar(new Date());
     });
-    // gerar horários padrão
+
     this.generateTimes();
   }
 
-  // Wizard
   nextStep(): void {
     if (this.step < 5) this.step++;
   }
@@ -81,7 +78,6 @@ export class PatientNewAppointment implements OnInit {
     if (this.step > 1) this.step--;
   }
 
-  // Step 2: filtrar médicos
   onSelectSpecialty(): void {
     this.doctors = this.allDoctors.filter(
       (d) => d.especialidade === this.selectedSpecialty
@@ -89,65 +85,62 @@ export class PatientNewAppointment implements OnInit {
     this.selectedDoctorId = null;
   }
 
-  // Step 3: calendário
   buildCalendar(date: Date): void {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-
-    const startDay = firstDay.getDay();
-    const totalDays = lastDay.getDate();
+    const year = date.getFullYear(),
+      month = date.getMonth();
+    const first = new Date(year, month, 1),
+      last = new Date(year, month + 1, 0);
+    const start = first.getDay(),
+      total = last.getDate();
 
     this.calendarDays = [];
 
-    for (let i = startDay - 1; i >= 0; i--) {
-      const prev = new Date(year, month, -i);
-      this.calendarDays.push({ date: prev, currentMonth: false });
+    for (let i = start - 1; i >= 0; i--) {
+      this.calendarDays.push({
+        date: new Date(year, month, -i),
+        currentMonth: false,
+      });
     }
 
-    for (let i = 1; i <= totalDays; i++) {
-      const current = new Date(year, month, i);
-      this.calendarDays.push({ date: current, currentMonth: true });
+    for (let i = 1; i <= total; i++) {
+      this.calendarDays.push({
+        date: new Date(year, month, i),
+        currentMonth: true,
+      });
     }
 
-    const remaining = 42 - this.calendarDays.length;
-    for (let i = 1; i <= remaining; i++) {
-      const next = new Date(year, month + 1, i);
-      this.calendarDays.push({ date: next, currentMonth: false });
+    const rem = 42 - this.calendarDays.length;
+    for (let i = 1; i <= rem; i++) {
+      this.calendarDays.push({
+        date: new Date(year, month + 1, i),
+        currentMonth: false,
+      });
     }
   }
 
   prevMonth(): void {
-    const newDate = new Date(this.selectedDate);
-    newDate.setMonth(newDate.getMonth() - 1);
-    this.selectedDate = newDate;
-    this.buildCalendar(newDate);
+    const d = new Date(this.selectedDate);
+    d.setMonth(d.getMonth() - 1);
+    this.selectedDate = d;
+    this.buildCalendar(d);
   }
-
   nextMonth(): void {
-    const newDate = new Date(this.selectedDate);
-    newDate.setMonth(newDate.getMonth() + 1);
-    this.selectedDate = newDate;
-    this.buildCalendar(newDate);
+    const d = new Date(this.selectedDate);
+    d.setMonth(d.getMonth() + 1);
+    this.selectedDate = d;
+    this.buildCalendar(d);
   }
-
   selectDate(date: Date): void {
     this.selectedDate = date;
   }
-
   isSelected(date: Date): boolean {
     return date.toDateString() === this.selectedDate.toDateString();
   }
 
-  // Step 4: horários disponíveis
   generateTimes(): void {
-    const start = 8,
-      end = 18; // 8h às 18h
-    for (let hour = start; hour < end; hour++) {
-      this.times.push(`${hour.toString().padStart(2, '0')}:00`);
-      this.times.push(`${hour.toString().padStart(2, '0')}:30`);
+    for (let h = 8; h < 18; h++) {
+      this.times.push(`${h.toString().padStart(2, '0')}:00`);
+      this.times.push(`${h.toString().padStart(2, '0')}:30`);
     }
   }
 
@@ -163,36 +156,49 @@ export class PatientNewAppointment implements OnInit {
   }
 
   selectTime(time: string): void {
-    if (this.isTimeAvailable(time)) this.selectedTime = time;
+    if (this.isTimeAvailable(time)) {
+      this.selectedTime = time;
+    }
   }
 
+  /** Confirma e persiste o agendamento no backend */
   confirmarAgendamento(): void {
-    const newId = Math.max(...this.allConsultas.map((c) => c.id_consulta)) + 1;
     const [hours, minutes] = this.selectedTime!.split(':').map(Number);
     const dt = new Date(this.selectedDate);
     dt.setHours(hours, minutes, 0, 0);
 
-    const doctorId = Number(this.selectedDoctorId); // conversão explícita
+    const doctorId = Number(this.selectedDoctorId);
     const currentUser = this.dataService.getUsuarioLogado() as UsuarioLogado;
 
     const novaConsulta: Consulta = {
-      id_consulta: newId,
+      id_consulta: 0,
       id_medico: doctorId,
       id_paciente: currentUser.id,
-      data_consulta: dt,
+      data_consulta: this.formatToMySQL(dt) as any,
       status: 'agendada',
     };
 
-    console.log('nova consulta:', novaConsulta);
-
-    const updated = [...this.allConsultas, novaConsulta];
-    (this.dataService as any).consultas$.next(updated);
-
-    this.showConfirmation = true;
+    this.dataService.addConsulta(novaConsulta).subscribe({
+      next: () => {
+        this.showConfirmation = true;
+      },
+      error: (err) => {
+        console.error('Erro ao criar nova consulta', err);
+      },
+    });
   }
 
   voltarDashboard(): void {
     const user = this.dataService.getUsuarioLogado()!;
     this.router.navigate(['/paciente', user.id]);
+  }
+
+  /** Serializa Date em string MySQL `YYYY-MM-DD HH:MM:SS` */
+  private formatToMySQL(dt: Date): string {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return (
+      `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}` +
+      ` ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`
+    );
   }
 }

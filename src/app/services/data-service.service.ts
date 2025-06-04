@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, tap, map } from 'rxjs';
 
-// ======= Interfaces =======
 export interface UsuarioLogado {
   id: number;
   fullName: string;
@@ -56,218 +56,309 @@ export interface Historico {
   id_consulta: number;
 }
 
-
 @Injectable({ providedIn: 'root' })
 export class DataService {
   private readonly USER_KEY = 'usuarioLogado';
+  private readonly API_URL = 'http://localhost:3000/api';
 
- 
   private pacientes$ = new BehaviorSubject<Paciente[]>([]);
   private medicos$ = new BehaviorSubject<Medico[]>([]);
   private usuarios$ = new BehaviorSubject<Usuario[]>([]);
   private consultas$ = new BehaviorSubject<Consulta[]>([]);
   private historico$ = new BehaviorSubject<Historico[]>([]);
-
-  private usuarioLogadoSubject = new BehaviorSubject<UsuarioLogado | null>(
+  private usuarioLogado = new BehaviorSubject<UsuarioLogado | null>(
     this.getUsuarioLogadoFromStorage()
   );
 
-  constructor() {
+  constructor(private http: HttpClient) {
     this.loadInitialData();
   }
 
   private loadInitialData() {
- 
-    const pacientes: Paciente[] = [
-      {
-        id_paciente: 1,
-        nome: 'João Silva',
-        data_nascimento: new Date('1985-06-15'),
-        CPF: '123.456.789-00',
-        sexo: 'Masculino',
-        email: 'patient@example.com',
-        senha: 'senha123',
-        telefone: '(11) 91234-5678',
-      },
-      {
-        id_paciente: 2,
-        nome: 'Maria Oliveira',
-        data_nascimento: new Date('1992-11-30'),
-        CPF: '987.654.321-00',
-        sexo: 'Feminino',
-        email: 'maria.oliveira@example.com',
-        senha: 'senha456',
-        telefone: '(21) 99876-5432',
-      },
-      {
-        id_paciente: 3,
-        nome: 'Mario Netto',
-        data_nascimento: new Date('1992-11-30'),
-        CPF: '987.654.321-00',
-        sexo: 'Masculino',
-        email: 'mario@example.com',
-        senha: '123456',
-        telefone: '(21) 99876-5432',
-      },
-    ];
+    this.http
+      .get<Paciente[]>(`${this.API_URL}/pacientes`)
+      .subscribe((p) => this.pacientes$.next(p));
 
-  
-    const medicos: Medico[] = [
-      {
-        id_medico: 1,
-        nome: 'Dr. Carlos Pereira',
-        email: 'doctor@example.com',
-        senha: '123456',
-        telefone: '(11) 93456-7890',
-        especialidade: 'Clínica Geral',
-        CRM: 'SP12345',
-        CPF: '111.222.333-44',
-      },
-      {
-        id_medico: 2,
-        nome: 'Dra. Ana Costa',
-        email: 'ana.costa@clinica.com',
-        senha: '123456',
-        telefone: '(21) 94567-1234',
-        especialidade: 'Pediatria',
-        CRM: 'RJ67890',
-        CPF: '555.666.777-88',
-      },
-    ];
+    this.http
+      .get<Medico[]>(`${this.API_URL}/medicos`)
+      .subscribe((m) => this.medicos$.next(m));
 
-    // Predefined Usuarios
-    const usuarios: Usuario[] = [
-      {
-        id_usuario: 1,
-        nome: 'Admin',
-        email: 'admin@example.com',
-        senha: 'admin123',
-      },
-    ];
+    this.http
+      .get<Usuario[]>(`${this.API_URL}/usuarios`)
+      .subscribe((u) => this.usuarios$.next(u));
 
-    // Predefined Consultas
-    const consultas: Consulta[] = [
-      {
-        id_consulta: 1,
-        id_paciente: 1,
-        id_medico: 1,
-        data_consulta: new Date('2025-06-01T10:30:00'),
-        status: 'agendada',
-      },
-      {
-        id_consulta: 2,
-        id_paciente: 2,
-        id_medico: 2,
-        data_consulta: new Date('2025-06-02T14:00:00'),
-        status: 'agendada',
-      },
-      {
-        id_consulta: 3,
-        id_paciente: 3,
-        id_medico: 2,
-        data_consulta: new Date('2025-06-02T15:00:00'),
-        status: 'agendada',
-      },
-      {
-        id_consulta: 4,
-        id_paciente: 3,
-        id_medico: 2,
-        data_consulta: new Date('2025-06-03T09:00:00'),
-        status: 'agendada',
-      },
-      {
-        id_consulta: 5,
-        id_paciente: 2,
-        id_medico: 2,
-        data_consulta: new Date('2025-06-03T11:00:00'),
-        status: 'agendada',
-      },
-    ];
+    this.http
+      .get<any[]>(`${this.API_URL}/consultas`)
+      .pipe(
+        map((raw) =>
+          raw.map(
+            (c) =>
+              ({
+                ...c,
+                data_consulta: new Date(c.data_consulta.replace(' ', 'T')),
+              } as Consulta)
+          )
+        )
+      )
+      .subscribe((list) => this.consultas$.next(list));
 
-    // Predefined Histórico
-    const historico: Historico[] = [
-      { id_historicoconsulta: 1, id_consulta: 1 },
-    ];
-
-    this.pacientes$.next(pacientes);
-    this.medicos$.next(medicos);
-    this.usuarios$.next(usuarios);
-    this.consultas$.next(consultas);
-    this.historico$.next(historico);
+    this.http
+      .get<Historico[]>(`${this.API_URL}/historico`)
+      .subscribe((h) => this.historico$.next(h));
   }
 
-  // ======= Paciente CRUD =======
   getPacientes(): Observable<Paciente[]> {
     return this.pacientes$.asObservable();
   }
-  getPacienteById(id: number): Observable<Paciente | undefined> {
-    return of(this.pacientes$.value.find((p) => p.id_paciente === id));
+  getPacienteById(id: number): Observable<Paciente> {
+    return this.http.get<Paciente>(`${this.API_URL}/pacientes/${id}`).pipe(
+      tap((p) => {
+        const list = this.pacientes$.value;
+        if (!list.find((x) => x.id_paciente === p.id_paciente)) {
+          this.pacientes$.next([...list, p]);
+        }
+      })
+    );
   }
-  addPaciente(p: Paciente) {
-    this.pacientes$.next([...this.pacientes$.value, p]);
+  addPaciente(p: Paciente): Observable<Paciente> {
+    const formatDateOnly = (dt: string | Date): string => {
+      const d = typeof dt === 'string' ? new Date(dt) : dt;
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+
+    const payload = {
+      ...p,
+      data_nascimento: formatDateOnly(p.data_nascimento),
+    };
+
+    return this.http
+      .post<Paciente>(`${this.API_URL}/pacientes`, payload)
+      .pipe(
+        tap((novo) => this.pacientes$.next([...this.pacientes$.value, novo]))
+      );
   }
 
-  // ======= Médico CRUD =======
   getMedicos(): Observable<Medico[]> {
     return this.medicos$.asObservable();
   }
-  getMedicoById(id: number): Observable<Medico | null> {
-    return of(this.medicos$.value.find((m) => m.id_medico === id) || null);
+
+  getMedicoById(id: number): Observable<Medico> {
+    return this.http.get<Medico>(`${this.API_URL}/medicos/${id}`).pipe(
+      tap((m) => {
+        const list = this.medicos$.value;
+        if (!list.find((x) => x.id_medico === m.id_medico)) {
+          this.medicos$.next([...list, m]);
+        }
+      })
+    );
   }
 
-  // ======= Usuário CRUD =======
+  addMedico(m: Medico): Observable<Medico> {
+    return this.http
+      .post<Medico>(`${this.API_URL}/medicos`, m)
+      .pipe(tap((novo) => this.medicos$.next([...this.medicos$.value, novo])));
+  }
+
+  updateMedico(m: Medico): Observable<Medico> {
+    return this.http
+      .put<Medico>(`${this.API_URL}/medicos/${m.id_medico}`, m)
+      .pipe(
+        tap((updated) => {
+          const list = this.medicos$.value.map((med) =>
+            med.id_medico === updated.id_medico ? updated : med
+          );
+          this.medicos$.next(list);
+        })
+      );
+  }
+
+  deleteMedico(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.API_URL}/medicos/${id}`).pipe(
+      tap(() => {
+        const list = this.medicos$.value.filter((m) => m.id_medico !== id);
+        this.medicos$.next(list);
+      })
+    );
+  }
+
   getUsuarios(): Observable<Usuario[]> {
     return this.usuarios$.asObservable();
   }
-  getUsuarioById(id: number): Observable<Usuario | undefined> {
-    return of(this.usuarios$.value.find((u) => u.id_usuario === id));
+  getUsuarioById(id: number): Observable<Usuario> {
+    return this.http.get<Usuario>(`${this.API_URL}/usuarios/${id}`).pipe(
+      tap((u) => {
+        const list = this.usuarios$.value;
+        if (!list.find((x) => x.id_usuario === u.id_usuario)) {
+          this.usuarios$.next([...list, u]);
+        }
+      })
+    );
   }
-  addUsuario(usuario: Usuario): void {
-    this.usuarios$.next([...this.usuarios$.value, usuario]);
+  addUsuario(u: Usuario): Observable<Usuario> {
+    return this.http
+      .post<Usuario>(`${this.API_URL}/usuarios`, u)
+      .pipe(
+        tap((novo) => this.usuarios$.next([...this.usuarios$.value, novo]))
+      );
   }
 
-  // ======= Consulta & Histórico =======
   getConsultas(): Observable<Consulta[]> {
     return this.consultas$.asObservable();
   }
+  getConsultaById(id: number): Observable<Consulta> {
+    return this.http.get<Consulta>(`${this.API_URL}/consultas/${id}`).pipe(
+      map(
+        (c) =>
+          ({
+            ...c,
+            data_consulta: new Date((c as any).data_consulta.replace(' ', 'T')),
+          } as Consulta)
+      ),
+      tap((c) => {
+        const list = this.consultas$.value;
+        if (!list.find((x) => x.id_consulta === c.id_consulta)) {
+          this.consultas$.next([...list, c]);
+        }
+      })
+    );
+  }
+  addConsulta(consulta: Consulta): Observable<Consulta> {
+    const payload = {
+      ...consulta,
+      data_consulta: this.formatDate(consulta.data_consulta),
+    };
+    return this.http.post<Consulta>(`${this.API_URL}/consultas`, payload).pipe(
+      map(
+        (novo) =>
+          ({
+            ...novo,
+            data_consulta: new Date(
+              (novo as any).data_consulta.replace(' ', 'T')
+            ),
+          } as Consulta)
+      ),
+      tap((parsed) => this.consultas$.next([...this.consultas$.value, parsed]))
+    );
+  }
+  updateConsulta(consulta: Consulta): Observable<Consulta> {
+    const payload = {
+      ...consulta,
+      data_consulta: this.formatDate(consulta.data_consulta),
+    };
+    return this.http
+      .put<Consulta>(
+        `${this.API_URL}/consultas/${consulta.id_consulta}`,
+        payload
+      )
+      .pipe(
+        map(
+          (u) =>
+            ({
+              ...u,
+              data_consulta: new Date(
+                (u as any).data_consulta.replace(' ', 'T')
+              ),
+            } as Consulta)
+        ),
+        tap((updated) => {
+          const list = this.consultas$.value.map((c) =>
+            c.id_consulta === updated.id_consulta ? updated : c
+          );
+          this.consultas$.next(list);
+        })
+      );
+  }
+
+  registerUser(formData: any): Observable<any> {
+    const {
+      accountType,
+      fullName,
+      email,
+      password,
+      cpf,
+      gender,
+      phone,
+      birthDate,
+      crm,
+      specialty,
+    } = formData;
+
+    if (accountType === 'paciente') {
+      const paciente: Paciente = {
+        id_paciente: 0,
+        nome: fullName,
+        email,
+        senha: password,
+        CPF: cpf,
+        sexo: gender,
+        telefone: phone,
+        data_nascimento: birthDate,
+      };
+      return this.addPaciente(paciente);
+    }
+
+    if (accountType === 'medico') {
+      const medico: Medico = {
+        id_medico: 0,
+        nome: fullName,
+        email,
+        senha: password,
+        telefone: phone,
+        CPF: cpf,
+        CRM: crm,
+        especialidade: specialty,
+      };
+      return this.addMedico(medico);
+    }
+
+    if (accountType === 'recepcionista') {
+      const usuario: Usuario = {
+        id_usuario: 0,
+        nome: fullName,
+        email,
+        senha: password,
+      };
+      return this.addUsuario(usuario);
+    }
+
+    throw new Error('Tipo de conta inválido');
+  }
+
+  private formatDate(dt: string | Date): string {
+    if (typeof dt === 'string') {
+      dt = new Date(dt);
+    }
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return (
+      `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ` +
+      `${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`
+    );
+  }
+
   getHistorico(): Observable<Historico[]> {
     return this.historico$.asObservable();
   }
 
-  // ======= Login Persistente Reativo =======
   private getUsuarioLogadoFromStorage(): UsuarioLogado | null {
     const json = localStorage.getItem(this.USER_KEY);
     return json ? JSON.parse(json) : null;
   }
-
-  /** Observable para usuário logado */
   getUsuarioLogado$(): Observable<UsuarioLogado | null> {
-    return this.usuarioLogadoSubject.asObservable();
+    return this.usuarioLogado.asObservable();
   }
-
-  /** Obtém o usuário logado atual (valor síncrono) */
   getUsuarioLogado(): UsuarioLogado | null {
-    return this.usuarioLogadoSubject.value;
+    return this.usuarioLogado.value;
   }
-
-  /** Salva usuário logado e emite atualização */
-  setUsuarioLogado(usuario: UsuarioLogado): void {
-    localStorage.setItem(this.USER_KEY, JSON.stringify(usuario));
-    this.usuarioLogadoSubject.next(usuario);
+  setUsuarioLogado(u: UsuarioLogado): void {
+    localStorage.setItem(this.USER_KEY, JSON.stringify(u));
+    this.usuarioLogado.next(u);
   }
-
-  /** Logout: remove localStorage e emite null */
   logout(): void {
     localStorage.removeItem(this.USER_KEY);
-    this.usuarioLogadoSubject.next(null);
+    this.usuarioLogado.next(null);
   }
-
-  /** Verifica se está logado */
   isLogado(): boolean {
-    return this.usuarioLogadoSubject.value !== null;
-  }
-
-  addConsulta(consulta: Consulta): void {
-    this.consultas$.next([...this.consultas$.value, consulta]);
+    return this.usuarioLogado.value !== null;
   }
 }

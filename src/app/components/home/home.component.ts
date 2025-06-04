@@ -7,10 +7,11 @@ import { RouterModule } from '@angular/router';
   selector: 'app-home',
   imports: [HomeFeaturesComponent, RouterModule],
   templateUrl: './home.component.html',
-  styleUrl: './home.component.css'
+  styleUrl: './home.component.css',
 })
 export class HomeComponent implements AfterViewInit {
-  @ViewChild('splineCanvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('splineCanvas', { static: true })
+  canvasRef!: ElementRef<HTMLCanvasElement>;
 
   ngAfterViewInit(): void {
     const app = new Application(this.canvasRef.nativeElement);

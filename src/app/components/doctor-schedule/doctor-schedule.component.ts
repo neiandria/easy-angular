@@ -9,6 +9,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+
 interface ConsultaExibicao {
   consulta: Consulta;
   paciente: Paciente;
@@ -154,14 +155,26 @@ export class MedicoAgendaComponent implements OnInit {
   confirmarAcao(): void {
     if (!this.consultaSelecionada || !this.acaoPendencia) return;
 
-    if (this.acaoPendencia === 'cancelar') {
-      this.consultaSelecionada.status = 'cancelada';
-    } else if (this.acaoPendencia === 'confirmar') {
-      this.consultaSelecionada.status = 'realizada';
-    }
+    const novoStatus: 'realizada' | 'cancelada' =
+      this.acaoPendencia === 'cancelar' ? 'cancelada' : 'realizada';
 
-    this.updateDailyConsultas();
-    this.fecharConfirmacao();
+    const consultaAtualizada: Consulta = {
+      ...this.consultaSelecionada,
+      status: novoStatus,
+    };
+
+    this.dataService.updateConsulta(consultaAtualizada).subscribe({
+      next: () => {
+        this.consultaSelecionada!.status = novoStatus;
+
+        this.updateDailyConsultas();
+
+        this.fecharConfirmacao();
+      },
+      error: (err) => {
+        console.error(`Erro ao ${this.acaoPendencia} consulta:`, err);
+      },
+    });
   }
 
   fecharConfirmacao(): void {
